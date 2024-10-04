@@ -3,16 +3,16 @@ from backend.mainwindow import MainWindow
 from pymobiledevice3 import usbmux
 from PySide6.QtWidgets import QApplication
 import sys
-from tweak.eligibility import EUTweak
+from tweak.authorization import AuthorizationTweak
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    dev_manager = DeviceManager()
+    device_manager = DeviceManager()
 
-    tweak = EUTweak()
+    authorization_tweak = AuthorizationTweak()
 
-    window = MainWindow(dev_manager, tweak)
+    window = MainWindow(device_manager, authorization_tweak)
     window.show()
 
     sys.exit(app.exec())
