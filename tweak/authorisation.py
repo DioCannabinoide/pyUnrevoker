@@ -1,49 +1,35 @@
 from exploit.restore import FileToRestore, restore_files
 import json
 from pathlib import Path
+from pymobiledevice3.services.installation_proxy import InstallationProxyService
 
-class AuthorizationTweak:
-    def __init__(self, method="2"):
-        print("Initializing Unrevoker authorization...")
-        self.rejection_files = []
-        self.set_method(method)
+class UnrevokeTweak:
+    def __init__(self):
+        print("Initializing...")
+        self.files = []
 
-    def set_method(self, method):
-        self.method = method
-
-    def setup_variables(self, device_manager):
+    def setup_variables(self, dev_manager):
         try:
             with open(Path.joinpath(Path.cwd(), 'tweak/files/restore.json'), 'r') as json_file:
                 json_data = json.load(json_file)
 
-            for file_info in json_data["authorization_files"]:
-                empty_file = FileToRestore(
-                    contents=b'',
-                    restore_path=f"/private/var/db/MobileIdentityData/{file_info['filename']}",
-                    restore_name=file_info["filename"]
+            for file_info in json_data["restore_files"]:
+                file_to_unrevoke = FileToRestore(
+                    contents=open(Path.joinpath(Path.cwd(), f'tweak/files/{file_info["file"]}'), 'rb').read(),
+                    restore_path="/private/var/db/MobileIdentityData/",
+                    restore_name=file_info["file"]
                 )
-                actual_file = FileToRestore(
-                    contents=open(Path.joinpath(Path.cwd(), f'tweak/files/{file_info["filename"]}'), 'rb').read(),
-                    restore_path=f"/private/var/db/MobileIdentityData/{file_info['filename']}",
-                    restore_name=file_info["filename"]
-                )
-                self.rejection_files.append({
-                    "actual_file": actual_file,
-                    "empty_file": empty_file,
-                    "file_info": file_info
-                })
+                self.files.append(file_to_unrevoke)
 
-            if not self.rejection_files:
-                print("No valid files to restore.")
+            if not self.files:
+                print("No valid files to unrevoke.")
 
         except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
             print(f"Error during setup: {e}")
 
-    def apply(self, device_manager):
-        self.setup_variables(device_manager)
-        for file_entry in self.rejection_files:
-            actual_file = file_entry["actual_file"]
-            file_info = file_entry["file_info"]
-            print(f"Restoring {file_info.get('filename')} to /private/var/db/MobileIdentityData/")
-            restore_files([actual_file], reboot=False, lockdown_client=device_manager.device.get("ld"))
-        restore_files([], reboot=True, lockdown_client=device_manager.device.get("ld"))
+    def apply(self, dev_manager):
+        self.setup_variables(dev_manager)
+        for file in self.files:
+            print(f"Unrevoking {file.restore_name} to {file.restore_path}")
+            restore_files([file], reboot=False, lockdown_client=dev_manager.device.get("ld"))
+        restore_files([], reboot=True, lockdown_client=dev_manager.device.get("ld"))
